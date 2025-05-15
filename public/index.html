@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebSocket Chat</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      #messages {
+        height: 300px;
+        border: 1px solid #ccc;
+        margin-bottom: 10px;
+        padding: 10px;
+        overflow-y: auto;
+      }
+      #message-form {
+        display: flex;
+      }
+      #message-input {
+        flex: 1;
+        padding: 8px;
+        margin-right: 10px;
+      }
+      button {
+        padding: 8px 16px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+      .status {
+        color: #666;
+        font-style: italic;
+      }
+      .message {
+        margin-bottom: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>WebSocket Chat</h1>
+    <div id="connection-status" class="status">Connecting...</div>
+    <div id="messages"></div>
+    <form id="message-form">
+      <input
+        type="text"
+        id="message-input"
+        placeholder="Type a message..."
+        autocomplete="off"
+      />
+      <button type="submit">Send</button>
+    </form>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const messagesDiv = document.getElementById("messages");
+        const messageForm = document.getElementById("message-form");
+        const messageInput = document.getElementById("message-input");
+        const connectionStatus = document.getElementById("connection-status");
+
+        // Create WebSocket connection
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const socket = new WebSocket(`${protocol}//${window.location.host}`);
+
+        // Connection opened
+        socket.addEventListener("open", function () {
+          connectionStatus.textContent = "Connected";
+          connectionStatus.style.color = "#4CAF50";
+          addMessage("Connected to the server", "status");
+        });
+
+        // Listen for messages
+        socket.addEventListener("message", function (event) {
+          addMessage(event.data);
+        });
+
+        // Connection closed
+        socket.addEventListener("close", function () {
+          connectionStatus.textContent = "Disconnected";
+          connectionStatus.style.color = "#f44336";
+          addMessage("Disconnected from the server", "status");
+        });
+
+        // Connection error
+        socket.addEventListener("error", function (error) {
+          console.error("WebSocket error:", error);
+          connectionStatus.textContent = "Error";
+          connectionStatus.style.color = "#f44336";
+          addMessage("Connection error", "status");
+        });
+
+        // Send message
+        messageForm.addEventListener("submit", function (e) {
+          e.preventDefault();
+          const message = messageInput.value.trim();
+          if (message && socket.readyState === WebSocket.OPEN) {
+            socket.send(message);
+            messageInput.value = "";
+          }
+        });
+
+        // Add message to the chat
+        function addMessage(message, type = "message") {
+          const messageElement = document.createElement("div");
+          messageElement.classList.add(type);
+          messageElement.textContent = message;
+          messagesDiv.appendChild(messageElement);
+          messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+      });
+    </script>
+  </body>
+</html>
