@@ -1,0 +1,9 @@
+{
+  "service_id": "play-machine-server",
+  "service_name": "Play Machine Server",
+  "domain": "https://play-machine-server.noshado.ws",
+  "host": "localhost",
+  "port": "3103",
+  "author": "leo",
+  "created_on": "Thu 15 May 2025 07:17:19 PM EDT"
+}
