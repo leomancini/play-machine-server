@@ -58,6 +58,9 @@
       />
       <button type="submit">Send</button>
     </form>
+    <div style="margin-top: 20px">
+      <button id="get-serial-data">Request Serial Data</button>
+    </div>
 
     <script>
       document.addEventListener("DOMContentLoaded", function () {
@@ -65,6 +68,7 @@
         const messageForm = document.getElementById("message-form");
         const messageInput = document.getElementById("message-input");
         const connectionStatus = document.getElementById("connection-status");
+        const getSerialDataBtn = document.getElementById("get-serial-data");
 
         // Create WebSocket connection
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -79,7 +83,21 @@
 
         // Listen for messages
         socket.addEventListener("message", function (event) {
-          addMessage(event.data);
+          try {
+            // Try to parse as JSON
+            const data = JSON.parse(event.data);
+            if (data.action === "getSerialData") {
+              addMessage(
+                `Serial data request received: ${JSON.stringify(data)}`,
+                "status"
+              );
+            } else {
+              addMessage(`Received JSON: ${JSON.stringify(data)}`);
+            }
+          } catch (e) {
+            // Not JSON, treat as plain text
+            addMessage(event.data);
+          }
         });
 
         // Connection closed
@@ -115,6 +133,17 @@
           messagesDiv.appendChild(messageElement);
           messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
+
+        // Add Serial Data Request button functionality
+        getSerialDataBtn.addEventListener("click", function () {
+          if (socket.readyState === WebSocket.OPEN) {
+            const message = JSON.stringify({ action: "getSerialData" });
+            socket.send(message);
+            addMessage("Requesting serial data...", "status");
+          } else {
+            addMessage("Cannot request serial data: not connected", "status");
+          }
+        });
       });
     </script>
   </body>
