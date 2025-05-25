@@ -19,6 +19,12 @@ wss.on("connection", (ws) => {
           }
         });
       } else if (parsedMessage.serialData !== undefined) {
+        const messageWithFlag = {
+          ...parsedMessage,
+          isFromSelf: true
+        };
+        ws.send(JSON.stringify(messageWithFlag));
+
         wss.clients.forEach((client) => {
           if (client !== ws && client.readyState === WebSocket.OPEN) {
             client.send(message.toString());
