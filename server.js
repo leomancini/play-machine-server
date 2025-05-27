@@ -12,6 +12,8 @@ wss.on("connection", (ws) => {
     try {
       const parsedMessage = JSON.parse(message);
 
+      console.log(parsedMessage);
+
       if (parsedMessage.action === "getSerialData") {
         wss.clients.forEach((client) => {
           if (client !== ws && client.readyState === WebSocket.OPEN) {
