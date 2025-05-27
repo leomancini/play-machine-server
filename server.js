@@ -3,11 +3,19 @@ import { createServer } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 
 const app = express();
-const port = 3103;
-const server = createServer(app);
-const wss = new WebSocketServer({ server });
+const wsPort = 3204; // New port for non-secure WS
+const wssPort = 3103; // Existing port for WSS
 
-wss.on("connection", (ws) => {
+// Create HTTP server for non-secure WS
+const wsServer = createServer(app);
+const ws = new WebSocketServer({ server: wsServer });
+
+// Create HTTP server for WSS (existing setup)
+const wssServer = createServer(app);
+const wss = new WebSocketServer({ server: wssServer });
+
+// Shared connection handling logic
+const handleConnection = (ws) => {
   ws.on("message", (message) => {
     try {
       const parsedMessage = JSON.parse(message);
@@ -47,8 +55,19 @@ wss.on("connection", (ws) => {
       });
     }
   });
+};
+
+// Apply connection handling to both servers
+ws.on("connection", handleConnection);
+wss.on("connection", handleConnection);
+
+// Start both servers
+wsServer.listen(wsPort, () => {
+  console.log(`WebSocket server running at ws://localhost:${wsPort}`);
 });
 
-server.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+wssServer.listen(wssPort, () => {
+  console.log(
+    `WebSocket server running at ws://localhost:${wssPort} (will be secured by Apache)`
+  );
 });
