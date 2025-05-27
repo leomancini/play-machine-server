@@ -17,7 +17,7 @@ wss.on("connection", (ws) => {
       if (parsedMessage.action === "getSerialData") {
         wss.clients.forEach((client) => {
           if (client !== ws && client.readyState === WebSocket.OPEN) {
-            client.send(message.toString());
+            client.send(JSON.stringify(parsedMessage));
           }
         });
       } else if (parsedMessage.serialData !== undefined) {
@@ -29,13 +29,13 @@ wss.on("connection", (ws) => {
 
         wss.clients.forEach((client) => {
           if (client !== ws && client.readyState === WebSocket.OPEN) {
-            client.send(message.toString());
+            client.send(JSON.stringify(parsedMessage));
           }
         });
       } else {
         wss.clients.forEach((client) => {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(message.toString());
+          if (client !== ws && client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(parsedMessage));
           }
         });
       }
