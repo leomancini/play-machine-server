@@ -47,6 +47,27 @@ const handleConnection = (ws) => {
       });
     }
   });
+
+  // Handle disconnection
+  ws.on("close", () => {
+    console.log("Client disconnected");
+    // Notify other clients about the disconnection
+    wss.clients.forEach((client) => {
+      if (client !== ws && client.readyState === WebSocket.OPEN) {
+        client.send(
+          JSON.stringify({
+            type: "disconnect",
+            timestamp: new Date().toISOString()
+          })
+        );
+      }
+    });
+  });
+
+  // Handle errors
+  ws.on("error", (error) => {
+    console.error("WebSocket error:", error);
+  });
 };
 
 // Apply connection handling to both servers
