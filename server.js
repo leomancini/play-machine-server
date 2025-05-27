@@ -20,15 +20,7 @@ const handleConnection = (ws) => {
     try {
       const parsedMessage = JSON.parse(message);
 
-      console.log(parsedMessage);
-
-      if (parsedMessage.action === "getSerialData") {
-        wss.clients.forEach((client) => {
-          if (client !== ws && client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(parsedMessage));
-          }
-        });
-      } else if (parsedMessage.serialData !== undefined) {
+      if (parsedMessage.serialData !== undefined) {
         const messageWithFlag = {
           ...parsedMessage,
           isFromSelf: true
