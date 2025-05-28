@@ -23,11 +23,17 @@ const allowedOrigins = [
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
+  console.log("Request origin:", origin);
+  console.log("Request headers:", req.headers);
+
   if (allowedOrigins.includes(origin)) {
+    console.log("Setting CORS headers for origin:", origin);
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
     res.setHeader("Access-Control-Allow-Credentials", "true");
+  } else {
+    console.log("Origin not in allowed list:", origin);
   }
 
   // Handle preflight requests
