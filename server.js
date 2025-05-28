@@ -18,22 +18,34 @@ const wssPort = 3103;
 // Trust proxy since we're behind Apache
 app.set("trust proxy", true);
 
-// CORS configuration
+// Debug middleware to log all request details
+app.use((req, res, next) => {
+  console.log("=== Request Details ===");
+  console.log("URL:", req.url);
+  console.log("Method:", req.method);
+  console.log("Headers:", req.headers);
+  console.log("Origin:", req.headers.origin);
+  console.log("=====================");
+  next();
+});
+
+// CORS configuration - must be first middleware after debug logging
 app.use(
   cors({
     origin: function (origin, callback) {
-      console.log("Request origin:", origin);
-      // Always return the requesting origin if it's in our allowed list
+      console.log("CORS middleware - Request origin:", origin);
+      console.log("CORS middleware - All headers:", this.req.headers);
+
       const allowedOrigins = [
         "https://play-machine-companion-app.leo.gd",
         "https://play-machine-os.leo.gd"
       ];
 
       if (!origin || allowedOrigins.includes(origin)) {
-        console.log("Allowing origin:", origin);
+        console.log("CORS middleware - Allowing origin:", origin);
         callback(null, origin || true);
       } else {
-        console.log("Blocking origin:", origin);
+        console.log("CORS middleware - Blocking origin:", origin);
         callback(new Error("Not allowed by CORS"));
       }
     },
