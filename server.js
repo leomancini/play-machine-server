@@ -15,99 +15,14 @@ const httpPort = 3205;
 const wsPort = 3204;
 const wssPort = 3103;
 
-app.set("trust proxy", true);
-
-app.use(
-  cors({
-    origin: "*",
-    credentials: true,
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "X-Forwarded-Proto",
-      "X-Forwarded-Ssl"
-    ],
-    exposedHeaders: ["Access-Control-Allow-Origin"]
-  })
-);
-
-app.use((req, res, next) => {
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("X-Frame-Options", "DENY");
-  res.setHeader("X-XSS-Protection", "1; mode=block");
-  if (req.headers.origin) {
-    res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
-  }
-  // More aggressive path normalization
-  const originalUrl = req.originalUrl;
-  req.url = req.url.replace(/\/+/g, "/");
-  req.originalUrl = req.originalUrl.replace(/\/+/g, "/");
-  req.path = req.path.replace(/\/+/g, "/");
-
-  console.log("Request details:", {
-    originalUrl: originalUrl,
-    normalizedUrl: req.url,
-    normalizedOriginalUrl: req.originalUrl,
-    normalizedPath: req.path,
-    method: req.method,
-    headers: req.headers
-  });
-
-  // Log the raw request details
-  console.log("Raw request details:", {
-    rawUrl: req.url,
-    rawOriginalUrl: req.originalUrl,
-    rawPath: req.path,
-    rawBaseUrl: req.baseUrl,
-    rawHeaders: req.headers,
-    rawMethod: req.method,
-    rawQuery: req.query
-  });
-
-  // Log the request headers that might affect path handling
-  console.log("Request headers:", {
-    host: req.headers.host,
-    "x-forwarded-host": req.headers["x-forwarded-host"],
-    "x-forwarded-proto": req.headers["x-forwarded-proto"],
-    "x-forwarded-ssl": req.headers["x-forwarded-ssl"],
-    "x-forwarded-uri": req.headers["x-forwarded-uri"],
-    "x-forwarded-for": req.headers["x-forwarded-for"]
-  });
-
-  next();
-});
-
-const validateApiKey = (message) => {
-  if (!message.apiKey) {
-    throw new Error("API key is required");
-  }
-  if (message.apiKey !== process.env.API_KEY) {
-    throw new Error("Invalid API key");
-  }
-  return true;
-};
-
-app.get("/", (req, res) => {
-  res.json({ status: "ok", message: "Server is running" });
-});
+app.use(cors());
+app.use(express.json());
 
 app.get("/api/validate-api-key", (req, res) => {
-  console.log("API Key validation request received:", {
-    url: req.url,
-    originalUrl: req.originalUrl,
-    path: req.path,
-    baseUrl: req.baseUrl,
-    query: req.query,
-    headers: req.headers
-  });
-
   const apiKey = req.query.apiKey;
-
   if (!apiKey) {
     return res.status(400).json({ valid: false, error: "API key is required" });
   }
-
   const isValid = apiKey === process.env.API_KEY;
   return res.json({ valid: isValid });
 });
@@ -124,7 +39,9 @@ const handleConnection = (ws) => {
     try {
       const parsedMessage = JSON.parse(message);
 
-      validateApiKey(parsedMessage);
+      if (parsedMessage.apiKey !== process.env.API_KEY) {
+        throw new Error("Invalid API key");
+      }
 
       if (parsedMessage.serialData !== undefined) {
         const messageWithFlag = {
@@ -166,16 +83,4 @@ wssServer.listen(wssPort, () => {
   console.log(
     `WebSocket server running at ws://localhost:${wssPort} (will be secured by Apache)`
   );
-});
-
-app.use((req, res) => {
-  console.log("Unhandled request:", {
-    method: req.method,
-    url: req.url,
-    originalUrl: req.originalUrl,
-    path: req.path,
-    baseUrl: req.baseUrl,
-    headers: req.headers
-  });
-  res.status(404).json({ error: `Cannot ${req.method} ${req.originalUrl}` });
 });
