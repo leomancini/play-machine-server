@@ -22,24 +22,24 @@ app.set("trust proxy", true);
 app.use(
   cors({
     origin: function (origin, callback) {
+      console.log("Request origin:", origin);
+      // Always return the requesting origin if it's in our allowed list
       const allowedOrigins = [
         "https://play-machine-companion-app.leo.gd",
         "https://play-machine-os.leo.gd"
       ];
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) === -1) {
-        console.log("Blocked by CORS:", origin);
-        return callback(new Error("Not allowed by CORS"), false);
+
+      if (!origin || allowedOrigins.includes(origin)) {
+        console.log("Allowing origin:", origin);
+        callback(null, origin || true);
+      } else {
+        console.log("Blocking origin:", origin);
+        callback(new Error("Not allowed by CORS"));
       }
-      console.log("Allowed by CORS:", origin);
-      return callback(null, true);
     },
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
-    preflightContinue: false,
-    optionsSuccessStatus: 204
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
   })
 );
 
