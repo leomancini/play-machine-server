@@ -19,24 +19,11 @@ app.set("trust proxy", true);
 
 // CORS middleware
 app.use((req, res, next) => {
-  const allowedOrigins = [
-    "https://play-machine-companion-app.leo.gd",
-    "http://play-machine-companion-app.leo.gd",
-    "https://play-machine-os.leo.gd",
-    "http://play-machine-os.leo.gd"
-  ];
-  const origin = req.headers.origin;
-
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Authorization"
-    );
-    res.setHeader("Access-Control-Max-Age", "86400"); // 24 hours
-  }
+  // For debugging, allow all origins temporarily
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Max-Age", "86400"); // 24 hours
 
   // Handle preflight requests
   if (req.method === "OPTIONS") {
