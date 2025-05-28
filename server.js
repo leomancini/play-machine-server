@@ -3,14 +3,12 @@ import { createServer } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import dotenv from "dotenv";
 
-// Load environment variables
 dotenv.config();
 
 const app = express();
 const wsPort = 3204;
 const wssPort = 3103;
 
-// Validate API key
 const validateApiKey = (message) => {
   if (!message.apiKey) {
     throw new Error("API key is required");
@@ -20,6 +18,17 @@ const validateApiKey = (message) => {
   }
   return true;
 };
+
+app.get("/validate-api-key", (req, res) => {
+  const apiKey = req.query.apiKey;
+
+  if (!apiKey) {
+    return res.status(400).json({ valid: false, error: "API key is required" });
+  }
+
+  const isValid = apiKey === process.env.API_KEY;
+  return res.json({ valid: isValid });
+});
 
 const wsServer = createServer(app);
 const ws = new WebSocketServer({ server: wsServer });
@@ -32,7 +41,6 @@ const handleConnection = (ws) => {
     try {
       const parsedMessage = JSON.parse(message);
 
-      // Validate API key before processing the message
       validateApiKey(parsedMessage);
 
       if (parsedMessage.serialData !== undefined) {
@@ -56,7 +64,6 @@ const handleConnection = (ws) => {
       }
     } catch (e) {
       console.error("Error processing message:", e);
-      // Send error message back to client
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ error: e.message }));
       }
