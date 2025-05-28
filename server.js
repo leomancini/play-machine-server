@@ -18,6 +18,12 @@ const wssPort = 3103;
 app.use(cors());
 app.use(express.json());
 
+// Add URL normalization middleware
+app.use((req, res, next) => {
+  req.url = req.url.replace(/\/+/g, "/");
+  next();
+});
+
 app.get("/api/validate-api-key", (req, res) => {
   const apiKey = req.query.apiKey;
   if (!apiKey) {
