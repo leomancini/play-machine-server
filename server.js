@@ -34,7 +34,6 @@ app.use(
   cors({
     origin: function (origin, callback) {
       console.log("CORS middleware - Request origin:", origin);
-      console.log("CORS middleware - All headers:", this.req.headers);
 
       const allowedOrigins = [
         "https://play-machine-companion-app.leo.gd",
@@ -43,7 +42,7 @@ app.use(
 
       if (!origin || allowedOrigins.includes(origin)) {
         console.log("CORS middleware - Allowing origin:", origin);
-        callback(null, origin || true);
+        callback(null, origin);
       } else {
         console.log("CORS middleware - Blocking origin:", origin);
         callback(new Error("Not allowed by CORS"));
