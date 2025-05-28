@@ -107,6 +107,14 @@ const handleConnection = (ws) => {
 ws.on("connection", handleConnection);
 wss.on("connection", handleConnection);
 
-httpServer.listen(httpPort, () => {});
-wsServer.listen(wsPort, () => {});
-wssServer.listen(wssPort, () => {});
+httpServer.listen(httpPort, () => {
+  console.log(`HTTP server running at http://localhost:${httpPort}`);
+});
+wsServer.listen(wsPort, () => {
+  console.log(`WebSocket server running at ws://localhost:${wsPort}`);
+});
+wssServer.listen(wssPort, () => {
+  console.log(
+    `WebSocket server running at ws://localhost:${wssPort} (will be secured by Apache)`
+  );
+});
