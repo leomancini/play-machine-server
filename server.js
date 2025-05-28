@@ -21,7 +21,9 @@ app.set("trust proxy", true);
 app.use((req, res, next) => {
   const allowedOrigins = [
     "https://play-machine-companion-app.leo.gd",
-    "http://play-machine-companion-app.leo.gd"
+    "http://play-machine-companion-app.leo.gd",
+    "https://play-machine-os.leo.gd",
+    "http://play-machine-os.leo.gd"
   ];
   const origin = req.headers.origin;
 
