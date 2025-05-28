@@ -6,7 +6,6 @@ import cors from "cors";
 
 dotenv.config();
 
-// Validate required environment variables
 if (!process.env.API_KEY) {
   console.error("API_KEY environment variable is not set");
   process.exit(1);
@@ -16,7 +15,6 @@ const app = express();
 const wsPort = 3204;
 const wssPort = 3103;
 
-// Configure CORS
 const allowedOrigins = [
   "http://localhost:3001",
   "http://localhost:3000",
@@ -37,7 +35,6 @@ app.use(
   })
 );
 
-// Add security headers middleware
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
