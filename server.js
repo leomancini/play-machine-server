@@ -14,36 +14,10 @@ const app = express();
 const wsPort = 3204;
 const wssPort = 3103;
 
-const allowedOrigins = [
-  "http://localhost:3001",
-  "http://localhost:3000",
-  "https://play-machine-companion-app.leo.gd",
-  "https://play-machine-os.leo.gd"
-];
+// Trust proxy since we're behind Apache
+app.set("trust proxy", true);
 
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  console.log("Request origin:", origin);
-  console.log("Request headers:", req.headers);
-
-  if (allowedOrigins.includes(origin)) {
-    console.log("Setting CORS headers for origin:", origin);
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-  } else {
-    console.log("Origin not in allowed list:", origin);
-  }
-
-  // Handle preflight requests
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-
-  next();
-});
-
+// Security headers
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
