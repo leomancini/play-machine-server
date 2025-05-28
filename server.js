@@ -12,6 +12,7 @@ if (!process.env.API_KEY) {
 }
 
 const app = express();
+const httpPort = 3205; // New HTTP server port
 const wsPort = 3204;
 const wssPort = 3103;
 
@@ -84,6 +85,7 @@ const validateApiKey = (message) => {
   return true;
 };
 
+// HTTP endpoints
 app.get("/validate-api-key", (req, res) => {
   const apiKey = req.query.apiKey;
 
@@ -99,10 +101,13 @@ app.get("/validate-api-key", (req, res) => {
   return res.json({ valid: isValid });
 });
 
-const wsServer = createServer(app);
-const ws = new WebSocketServer({ server: wsServer });
+// Create separate servers
+const httpServer = createServer(app);
+const wsServer = createServer();
+const wssServer = createServer();
 
-const wssServer = createServer(app);
+// WebSocket servers
+const ws = new WebSocketServer({ server: wsServer });
 const wss = new WebSocketServer({ server: wssServer });
 
 const handleConnection = (ws) => {
@@ -142,6 +147,11 @@ const handleConnection = (ws) => {
 
 ws.on("connection", handleConnection);
 wss.on("connection", handleConnection);
+
+// Start servers
+httpServer.listen(httpPort, () => {
+  console.log(`HTTP server running at http://localhost:${httpPort}`);
+});
 
 wsServer.listen(wsPort, () => {
   console.log(`WebSocket server running at ws://localhost:${wsPort}`);
