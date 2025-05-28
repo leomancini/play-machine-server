@@ -17,6 +17,32 @@ const wssPort = 3103;
 // Trust proxy since we're behind Apache
 app.set("trust proxy", true);
 
+// CORS middleware
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    "https://play-machine-companion-app.leo.gd",
+    "http://play-machine-companion-app.leo.gd"
+  ];
+  const origin = req.headers.origin;
+
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization"
+    );
+    res.setHeader("Access-Control-Max-Age", "86400"); // 24 hours
+  }
+
+  // Handle preflight requests
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+  next();
+});
+
 // Security headers
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
