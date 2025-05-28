@@ -52,7 +52,7 @@ const validateApiKey = (message) => {
   return true;
 };
 
-app.get("/validate-api-key", (req, res) => {
+app.get("/api/validate-api-key", (req, res) => {
   const apiKey = req.query.apiKey;
 
   if (!apiKey) {
