@@ -39,14 +39,42 @@ app.use((req, res, next) => {
   if (req.headers.origin) {
     res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
   }
-  console.log("Incoming request:", {
+  // More aggressive path normalization
+  const originalUrl = req.originalUrl;
+  req.url = req.url.replace(/\/+/g, "/");
+  req.originalUrl = req.originalUrl.replace(/\/+/g, "/");
+  req.path = req.path.replace(/\/+/g, "/");
+
+  console.log("Request details:", {
+    originalUrl: originalUrl,
+    normalizedUrl: req.url,
+    normalizedOriginalUrl: req.originalUrl,
+    normalizedPath: req.path,
     method: req.method,
-    path: req.path,
-    originalUrl: req.originalUrl,
-    baseUrl: req.baseUrl,
-    url: req.url,
     headers: req.headers
   });
+
+  // Log the raw request details
+  console.log("Raw request details:", {
+    rawUrl: req.url,
+    rawOriginalUrl: req.originalUrl,
+    rawPath: req.path,
+    rawBaseUrl: req.baseUrl,
+    rawHeaders: req.headers,
+    rawMethod: req.method,
+    rawQuery: req.query
+  });
+
+  // Log the request headers that might affect path handling
+  console.log("Request headers:", {
+    host: req.headers.host,
+    "x-forwarded-host": req.headers["x-forwarded-host"],
+    "x-forwarded-proto": req.headers["x-forwarded-proto"],
+    "x-forwarded-ssl": req.headers["x-forwarded-ssl"],
+    "x-forwarded-uri": req.headers["x-forwarded-uri"],
+    "x-forwarded-for": req.headers["x-forwarded-for"]
+  });
+
   next();
 });
 
@@ -65,12 +93,13 @@ app.get("/", (req, res) => {
 });
 
 app.get("/api/validate-api-key", (req, res) => {
-  console.log("API Key validation request:", {
-    path: req.path,
-    originalUrl: req.originalUrl,
-    baseUrl: req.baseUrl,
+  console.log("API Key validation request received:", {
     url: req.url,
-    query: req.query
+    originalUrl: req.originalUrl,
+    path: req.path,
+    baseUrl: req.baseUrl,
+    query: req.query,
+    headers: req.headers
   });
 
   const apiKey = req.query.apiKey;
@@ -142,10 +171,11 @@ wssServer.listen(wssPort, () => {
 app.use((req, res) => {
   console.log("Unhandled request:", {
     method: req.method,
-    path: req.path,
+    url: req.url,
     originalUrl: req.originalUrl,
+    path: req.path,
     baseUrl: req.baseUrl,
-    url: req.url
+    headers: req.headers
   });
   res.status(404).json({ error: `Cannot ${req.method} ${req.originalUrl}` });
 });
