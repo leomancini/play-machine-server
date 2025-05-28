@@ -2,18 +2,56 @@ import express from "express";
 import { createServer } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import dotenv from "dotenv";
+import cors from "cors";
 
 dotenv.config();
+
+// Validate required environment variables
+if (!process.env.API_KEY) {
+  console.error("API_KEY environment variable is not set");
+  process.exit(1);
+}
 
 const app = express();
 const wsPort = 3204;
 const wssPort = 3103;
 
+// Configure CORS
+const allowedOrigins = [
+  "http://localhost:3001",
+  "http://localhost:3000",
+  "https://play-machine-companion-app.leo.gd",
+  "https://play-machine-os.leo.gd"
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true
+  })
+);
+
+// Add security headers middleware
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  next();
+});
+
 const validateApiKey = (message) => {
   if (!message.apiKey) {
+    console.warn("API key validation failed: No API key provided");
     throw new Error("API key is required");
   }
   if (message.apiKey !== process.env.API_KEY) {
+    console.warn("API key validation failed: Invalid API key provided");
     throw new Error("Invalid API key");
   }
   return true;
@@ -23,10 +61,14 @@ app.get("/validate-api-key", (req, res) => {
   const apiKey = req.query.apiKey;
 
   if (!apiKey) {
+    console.warn("API key validation failed: No API key provided");
     return res.status(400).json({ valid: false, error: "API key is required" });
   }
 
   const isValid = apiKey === process.env.API_KEY;
+  if (!isValid) {
+    console.warn("API key validation failed: Invalid API key provided");
+  }
   return res.json({ valid: isValid });
 });
 
