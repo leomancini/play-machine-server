@@ -7,48 +7,19 @@ import cors from "cors";
 dotenv.config();
 
 if (!process.env.API_KEY) {
-  console.error("API_KEY environment variable is not set");
   process.exit(1);
 }
 
 const app = express();
-const httpPort = 3205; // New HTTP server port
+const httpPort = 3205;
 const wsPort = 3204;
 const wssPort = 3103;
 
-// Trust proxy since we're behind Apache
 app.set("trust proxy", true);
 
-// Debug middleware to log all request details
-app.use((req, res, next) => {
-  console.log("=== Request Details ===");
-  console.log("URL:", req.url);
-  console.log("Method:", req.method);
-  console.log("Headers:", req.headers);
-  console.log("Origin:", req.headers.origin);
-  console.log("=====================");
-  next();
-});
-
-// CORS configuration - must be first middleware after debug logging
 app.use(
   cors({
-    origin: function (origin, callback) {
-      console.log("CORS middleware - Request origin:", origin);
-
-      const allowedOrigins = [
-        "https://play-machine-companion-app.leo.gd",
-        "https://play-machine-os.leo.gd"
-      ];
-
-      if (!origin || allowedOrigins.includes(origin)) {
-        console.log("CORS middleware - Allowing origin:", origin);
-        callback(null, origin);
-      } else {
-        console.log("CORS middleware - Blocking origin:", origin);
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: "*",
     credentials: true,
     methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: [
@@ -61,12 +32,10 @@ app.use(
   })
 );
 
-// Security headers
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("X-XSS-Protection", "1; mode=block");
-  // Ensure CORS headers are preserved
   if (req.headers.origin) {
     res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
   }
@@ -75,38 +44,29 @@ app.use((req, res, next) => {
 
 const validateApiKey = (message) => {
   if (!message.apiKey) {
-    console.warn("API key validation failed: No API key provided");
     throw new Error("API key is required");
   }
   if (message.apiKey !== process.env.API_KEY) {
-    console.warn("API key validation failed: Invalid API key provided");
     throw new Error("Invalid API key");
   }
   return true;
 };
 
-// HTTP endpoints
 app.get("/validate-api-key", (req, res) => {
   const apiKey = req.query.apiKey;
 
   if (!apiKey) {
-    console.warn("API key validation failed: No API key provided");
     return res.status(400).json({ valid: false, error: "API key is required" });
   }
 
   const isValid = apiKey === process.env.API_KEY;
-  if (!isValid) {
-    console.warn("API key validation failed: Invalid API key provided");
-  }
   return res.json({ valid: isValid });
 });
 
-// Create separate servers
 const httpServer = createServer(app);
 const wsServer = createServer();
 const wssServer = createServer();
 
-// WebSocket servers
 const ws = new WebSocketServer({ server: wsServer });
 const wss = new WebSocketServer({ server: wssServer });
 
@@ -137,7 +97,6 @@ const handleConnection = (ws) => {
         });
       }
     } catch (e) {
-      console.error("Error processing message:", e);
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ error: e.message }));
       }
@@ -148,17 +107,6 @@ const handleConnection = (ws) => {
 ws.on("connection", handleConnection);
 wss.on("connection", handleConnection);
 
-// Start servers
-httpServer.listen(httpPort, () => {
-  console.log(`HTTP server running at http://localhost:${httpPort}`);
-});
-
-wsServer.listen(wsPort, () => {
-  console.log(`WebSocket server running at ws://localhost:${wsPort}`);
-});
-
-wssServer.listen(wssPort, () => {
-  console.log(
-    `WebSocket server running at ws://localhost:${wssPort} (will be secured by Apache)`
-  );
-});
+httpServer.listen(httpPort, () => {});
+wsServer.listen(wsPort, () => {});
+wssServer.listen(wssPort, () => {});
