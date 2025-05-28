@@ -50,7 +50,13 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Forwarded-Proto",
+      "X-Forwarded-Ssl"
+    ],
+    exposedHeaders: ["Access-Control-Allow-Origin"]
   })
 );
 
@@ -59,6 +65,10 @@ app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("X-XSS-Protection", "1; mode=block");
+  // Ensure CORS headers are preserved
+  if (req.headers.origin) {
+    res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
+  }
   next();
 });
 
