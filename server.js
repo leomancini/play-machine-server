@@ -39,6 +39,14 @@ app.use((req, res, next) => {
   if (req.headers.origin) {
     res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
   }
+  console.log("Incoming request:", {
+    method: req.method,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    baseUrl: req.baseUrl,
+    url: req.url,
+    headers: req.headers
+  });
   next();
 });
 
@@ -52,7 +60,19 @@ const validateApiKey = (message) => {
   return true;
 };
 
+app.get("/", (req, res) => {
+  res.json({ status: "ok", message: "Server is running" });
+});
+
 app.get("/api/validate-api-key", (req, res) => {
+  console.log("API Key validation request:", {
+    path: req.path,
+    originalUrl: req.originalUrl,
+    baseUrl: req.baseUrl,
+    url: req.url,
+    query: req.query
+  });
+
   const apiKey = req.query.apiKey;
 
   if (!apiKey) {
@@ -117,4 +137,15 @@ wssServer.listen(wssPort, () => {
   console.log(
     `WebSocket server running at ws://localhost:${wssPort} (will be secured by Apache)`
   );
+});
+
+app.use((req, res) => {
+  console.log("Unhandled request:", {
+    method: req.method,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    baseUrl: req.baseUrl,
+    url: req.url
+  });
+  res.status(404).json({ error: `Cannot ${req.method} ${req.originalUrl}` });
 });
