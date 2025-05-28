@@ -19,6 +19,7 @@ const handleConnection = (ws) => {
   ws.on("message", (message) => {
     try {
       const parsedMessage = JSON.parse(message);
+      console.log(parsedMessage);
 
       if (parsedMessage.serialData !== undefined) {
         const messageWithFlag = {
