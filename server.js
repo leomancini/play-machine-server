@@ -2,6 +2,7 @@ import express from "express";
 import { createServer } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import dotenv from "dotenv";
+import cors from "cors";
 
 dotenv.config();
 
@@ -17,20 +18,30 @@ const wssPort = 3103;
 // Trust proxy since we're behind Apache
 app.set("trust proxy", true);
 
-// CORS middleware
-app.use((req, res, next) => {
-  // For debugging, allow all origins temporarily
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.setHeader("Access-Control-Max-Age", "86400"); // 24 hours
-
-  // Handle preflight requests
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-  next();
-});
+// CORS configuration
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      const allowedOrigins = [
+        "https://play-machine-companion-app.leo.gd",
+        "https://play-machine-os.leo.gd"
+      ];
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        console.log("Blocked by CORS:", origin);
+        return callback(new Error("Not allowed by CORS"), false);
+      }
+      console.log("Allowed by CORS:", origin);
+      return callback(null, true);
+    },
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204
+  })
+);
 
 // Security headers
 app.use((req, res, next) => {
