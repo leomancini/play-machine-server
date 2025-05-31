@@ -65,7 +65,16 @@ const saveBase64Image = (base64Data, folderPath, filename) => {
 
 app.post("/api/save-screenshot", (req, res) => {
   try {
-    const { id, index, data } = req.body;
+    const { id, index, data, apiKey } = req.body;
+
+    // Validate API key first
+    if (!apiKey) {
+      return res.status(401).json({ error: "API key is required" });
+    }
+
+    if (apiKey !== process.env.API_KEY) {
+      return res.status(401).json({ error: "Invalid API key" });
+    }
 
     if (!id || !index || !data) {
       return res
@@ -74,7 +83,7 @@ app.post("/api/save-screenshot", (req, res) => {
     }
 
     const folderPath = path.join(process.cwd(), "screenshots", id);
-    const savedPath = saveBase64Image(data, folderPath, index);
+    saveBase64Image(data, folderPath, index);
 
     // Return relative path instead of absolute path
     const relativePath = path.join("screenshots", id, `${index}.jpg`);
