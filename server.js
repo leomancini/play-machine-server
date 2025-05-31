@@ -44,6 +44,18 @@ app.get("/api/validate-api-key", (req, res) => {
   return res.json({ valid: isValid });
 });
 
+app.get("/api/themes", (req, res) => {
+  try {
+    const themesPath = path.join(process.cwd(), "config", "Themes.json");
+    const themesData = fs.readFileSync(themesPath, "utf8");
+    const themes = JSON.parse(themesData);
+    res.json(themes);
+  } catch (error) {
+    console.error("Error reading themes config:", error);
+    res.status(500).json({ error: "Failed to load themes configuration" });
+  }
+});
+
 const saveBase64Image = (base64Data, folderPath, filename) => {
   if (!fs.existsSync(folderPath)) {
     fs.mkdirSync(folderPath, { recursive: true });
