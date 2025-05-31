@@ -12,7 +12,6 @@ if (!process.env.API_KEY) {
   process.exit(1);
 }
 
-// Create screenshots directory if it doesn't exist
 const screenshotsDir = path.join(process.cwd(), "screenshots");
 if (!fs.existsSync(screenshotsDir)) {
   fs.mkdirSync(screenshotsDir, { recursive: true });
@@ -26,13 +25,11 @@ const wssPort = 3103;
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 
-// Add URL normalization middleware
 app.use((req, res, next) => {
   req.url = req.url.replace(/\/+/g, "/");
   next();
 });
 
-// Serve static files from screenshots directory
 app.use(
   "/api/screenshots",
   express.static(path.join(process.cwd(), "screenshots"))
@@ -47,14 +44,11 @@ app.get("/api/validate-api-key", (req, res) => {
   return res.json({ valid: isValid });
 });
 
-// Function to save base64 image
 const saveBase64Image = (base64Data, folderPath, filename) => {
-  // Create folder if it doesn't exist
   if (!fs.existsSync(folderPath)) {
     fs.mkdirSync(folderPath, { recursive: true });
   }
 
-  // Remove the data URL prefix if present
   const base64Image = base64Data.replace(/^data:image\/\w+;base64,/, "");
   const buffer = Buffer.from(base64Image, "base64");
 
@@ -67,7 +61,6 @@ app.post("/api/save-screenshot", (req, res) => {
   try {
     const { id, index, data, apiKey } = req.body;
 
-    // Validate API key first
     if (!apiKey) {
       return res.status(401).json({ error: "API key is required" });
     }
@@ -85,13 +78,46 @@ app.post("/api/save-screenshot", (req, res) => {
     const folderPath = path.join(process.cwd(), "screenshots", id);
     saveBase64Image(data, folderPath, index);
 
-    // Return relative path instead of absolute path
     const relativePath = path.join("screenshots", id, `${index}.jpg`);
 
     res.json({ success: true, path: relativePath });
   } catch (error) {
     console.error("Error saving image:", error);
     res.status(500).json({ error: "Failed to save image" });
+  }
+});
+
+app.delete("/api/delete-screenshots/:id", (req, res) => {
+  try {
+    const { id } = req.params;
+    const { apiKey } = req.query;
+
+    if (!apiKey) {
+      return res.status(401).json({ error: "API key is required" });
+    }
+
+    if (apiKey !== process.env.API_KEY) {
+      return res.status(401).json({ error: "Invalid API key" });
+    }
+
+    if (!id) {
+      return res.status(400).json({ error: "ID parameter is required" });
+    }
+
+    const folderPath = path.join(process.cwd(), "screenshots", id);
+
+    if (!fs.existsSync(folderPath)) {
+      return res.status(404).json({ error: "Screenshot folder not found" });
+    }
+
+    fs.rmSync(folderPath, { recursive: true, force: true });
+
+    res.json({
+      success: true
+    });
+  } catch (error) {
+    console.error("Error deleting screenshots:", error);
+    res.status(500).json({ error: "Failed to delete screenshots" });
   }
 });
 
