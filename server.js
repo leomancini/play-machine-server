@@ -140,6 +140,9 @@ const wssServer = createServer();
 const ws = new WebSocketServer({ server: wsServer });
 const wss = new WebSocketServer({ server: wssServer });
 
+// Add request tracking
+const pendingRequests = new Map(); // requestId -> client websocket
+
 const handleConnection = (ws) => {
   ws.on("message", (message) => {
     try {
@@ -149,12 +152,24 @@ const handleConnection = (ws) => {
         throw new Error("Invalid API key");
       }
 
-      // Handle getSerialData requests - broadcast to other clients
+      // Handle getSerialData requests - broadcast to other clients and track the requester
       if (parsedMessage.action === "getSerialData") {
+        // Generate or use provided request ID
+        const requestId = parsedMessage.requestId || Date.now() + Math.random();
+
+        // Track which client made this request
+        pendingRequests.set(requestId, ws);
+
+        // Add requestId to the message before broadcasting
+        const messageWithRequestId = {
+          ...parsedMessage,
+          requestId
+        };
+
         // Broadcast the request to other clients (like device controllers)
         wss.clients.forEach((client) => {
           if (client !== ws && client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(parsedMessage));
+            client.send(JSON.stringify(messageWithRequestId));
           }
         });
       }
@@ -173,13 +188,28 @@ const handleConnection = (ws) => {
           }
         });
       }
-      // Handle screenshot data
+      // Handle screenshot data - send to original requester
       else if (parsedMessage.screenshotData !== undefined) {
-        const messageWithFlag = {
-          ...parsedMessage,
-          isFromSelf: true
-        };
-        ws.send(JSON.stringify(messageWithFlag));
+        const { requestId } = parsedMessage;
+
+        if (requestId && pendingRequests.has(requestId)) {
+          const originalRequester = pendingRequests.get(requestId);
+
+          // Send to the original requester if they're still connected
+          if (originalRequester.readyState === WebSocket.OPEN) {
+            originalRequester.send(JSON.stringify(parsedMessage));
+          }
+
+          // Clean up the request tracking
+          pendingRequests.delete(requestId);
+        } else {
+          // Fallback: send back to sender if no requestId or requester not found
+          const messageWithFlag = {
+            ...parsedMessage,
+            isFromSelf: true
+          };
+          ws.send(JSON.stringify(messageWithFlag));
+        }
       }
       // Handle all other messages
       else {
@@ -192,6 +222,16 @@ const handleConnection = (ws) => {
     } catch (e) {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ error: e.message }));
+      }
+    }
+  });
+
+  // Clean up pending requests when client disconnects
+  ws.on("close", () => {
+    // Remove any pending requests from this client
+    for (const [requestId, client] of pendingRequests.entries()) {
+      if (client === ws) {
+        pendingRequests.delete(requestId);
       }
     }
   });
