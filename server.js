@@ -149,7 +149,13 @@ const handleConnection = (ws) => {
         throw new Error("Invalid API key");
       }
 
-      if (parsedMessage.serialData !== undefined) {
+      if (parsedMessage.screenshotData !== undefined) {
+        const messageWithFlag = {
+          ...parsedMessage,
+          isFromSelf: true
+        };
+        ws.send(JSON.stringify(messageWithFlag));
+      } else if (parsedMessage.serialData !== undefined) {
         const messageWithFlag = {
           ...parsedMessage,
           isFromSelf: true
