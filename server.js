@@ -140,9 +140,6 @@ const wssServer = createServer();
 const ws = new WebSocketServer({ server: wsServer });
 const wss = new WebSocketServer({ server: wssServer });
 
-// Track serial data requests: requestId -> requesting client
-const serialDataRequests = new Map();
-
 const handleConnection = (ws) => {
   ws.on("message", (message) => {
     try {
@@ -152,69 +149,16 @@ const handleConnection = (ws) => {
         throw new Error("Invalid API key");
       }
 
-      // Handle getSerialData requests - store the requesting client
+      // Handle getSerialData requests - broadcast to other clients
       if (parsedMessage.action === "getSerialData") {
-        const requestId = parsedMessage.requestId || Date.now().toString();
-        serialDataRequests.set(requestId, ws);
-
         // Broadcast the request to other clients (like device controllers)
         wss.clients.forEach((client) => {
           if (client !== ws && client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify({ ...parsedMessage, requestId }));
+            client.send(JSON.stringify(parsedMessage));
           }
         });
       }
-      // Handle serialData responses - route only to requesting client
-      else if (
-        parsedMessage.serialData !== undefined &&
-        parsedMessage.requestId
-      ) {
-        const requestingClient = serialDataRequests.get(
-          parsedMessage.requestId
-        );
-        if (
-          requestingClient &&
-          requestingClient.readyState === WebSocket.OPEN
-        ) {
-          const messageWithFlag = {
-            ...parsedMessage,
-            isFromSelf: true
-          };
-          requestingClient.send(JSON.stringify(messageWithFlag));
-        }
-        // Clean up the request tracking
-        serialDataRequests.delete(parsedMessage.requestId);
-      }
-      // Handle screenshot data responses - route only to requesting client
-      else if (
-        parsedMessage.screenshotData !== undefined &&
-        parsedMessage.requestId
-      ) {
-        const requestingClient = serialDataRequests.get(
-          parsedMessage.requestId
-        );
-        if (
-          requestingClient &&
-          requestingClient.readyState === WebSocket.OPEN
-        ) {
-          const messageWithFlag = {
-            ...parsedMessage,
-            isFromSelf: true
-          };
-          requestingClient.send(JSON.stringify(messageWithFlag));
-        }
-        // Clean up the request tracking
-        serialDataRequests.delete(parsedMessage.requestId);
-      }
-      // Handle screenshot data without requestId (legacy behavior)
-      else if (parsedMessage.screenshotData !== undefined) {
-        const messageWithFlag = {
-          ...parsedMessage,
-          isFromSelf: true
-        };
-        ws.send(JSON.stringify(messageWithFlag));
-      }
-      // Handle other serialData (not a response to getSerialData)
+      // Handle serialData responses and other serialData
       else if (parsedMessage.serialData !== undefined) {
         const messageWithFlag = {
           ...parsedMessage,
@@ -229,6 +173,14 @@ const handleConnection = (ws) => {
           }
         });
       }
+      // Handle screenshot data
+      else if (parsedMessage.screenshotData !== undefined) {
+        const messageWithFlag = {
+          ...parsedMessage,
+          isFromSelf: true
+        };
+        ws.send(JSON.stringify(messageWithFlag));
+      }
       // Handle all other messages
       else {
         wss.clients.forEach((client) => {
@@ -240,16 +192,6 @@ const handleConnection = (ws) => {
     } catch (e) {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ error: e.message }));
-      }
-    }
-  });
-
-  // Clean up any pending requests when client disconnects
-  ws.on("close", () => {
-    // Remove any pending requests from this client
-    for (const [requestId, client] of serialDataRequests.entries()) {
-      if (client === ws) {
-        serialDataRequests.delete(requestId);
       }
     }
   });
