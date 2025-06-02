@@ -140,8 +140,13 @@ const wssServer = createServer();
 const ws = new WebSocketServer({ server: wsServer });
 const wss = new WebSocketServer({ server: wssServer });
 
-const handleConnection = (ws) => {
-  ws.on("message", (message) => {
+let socketIdCounter = 0;
+
+const handleConnection = (connection, serverType = "unknown") => {
+  const socketId = `${serverType}-${++socketIdCounter}-${Date.now()}`;
+  connection.socketId = socketId;
+
+  connection.on("message", (message) => {
     try {
       const parsedMessage = JSON.parse(message);
 
@@ -149,12 +154,87 @@ const handleConnection = (ws) => {
         throw new Error("Invalid API key");
       }
 
-      // Handle getSerialData requests - broadcast to other clients
-      if (parsedMessage.action === "getSerialData") {
-        // Broadcast the request to other clients (like device controllers)
+      // Handle messages with socketId - send only to specific client
+      if (parsedMessage.socketId) {
+        let targetClient = null;
+
+        // Search in both WS and WSS clients (now using the correct server instances)
+        ws.clients.forEach((client) => {
+          if (
+            client.socketId === parsedMessage.socketId &&
+            client.readyState === WebSocket.OPEN
+          ) {
+            targetClient = client;
+          }
+        });
+
+        if (!targetClient) {
+          wss.clients.forEach((client) => {
+            if (
+              client.socketId === parsedMessage.socketId &&
+              client.readyState === WebSocket.OPEN
+            ) {
+              targetClient = client;
+            }
+          });
+        }
+
+        if (targetClient) {
+          targetClient.send(JSON.stringify(parsedMessage));
+        } else {
+          // Log all available socket IDs for debugging
+          const availableSocketIds = [];
+          ws.clients.forEach((client) => {
+            if (client.socketId && client.readyState === WebSocket.OPEN) {
+              availableSocketIds.push(client.socketId);
+            }
+          });
+          wss.clients.forEach((client) => {
+            if (client.socketId && client.readyState === WebSocket.OPEN) {
+              availableSocketIds.push(client.socketId);
+            }
+          });
+        }
+
+        // Return early to prevent further processing
+        return;
+      }
+      // Handle getCurrentTheme requests - broadcast to other clients with socketId
+      else if (parsedMessage.action === "getCurrentTheme") {
+        const messageWithSocketId = {
+          ...parsedMessage,
+          socketId: socketId
+        };
+
         wss.clients.forEach((client) => {
-          if (client !== ws && client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(parsedMessage));
+          if (client !== connection && client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(messageWithSocketId));
+          }
+        });
+      }
+      // Handle getCurrentApp requests - broadcast to other clients with socketId
+      else if (parsedMessage.action === "getCurrentApp") {
+        const messageWithSocketId = {
+          ...parsedMessage,
+          socketId: socketId
+        };
+
+        wss.clients.forEach((client) => {
+          if (client !== connection && client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(messageWithSocketId));
+          }
+        });
+      }
+      // Handle getSerialData requests - broadcast to other clients with socketId
+      else if (parsedMessage.action === "getSerialData") {
+        const messageWithSocketId = {
+          ...parsedMessage,
+          socketId: socketId
+        };
+
+        wss.clients.forEach((client) => {
+          if (client !== connection && client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(messageWithSocketId));
           }
         });
       }
@@ -164,11 +244,16 @@ const handleConnection = (ws) => {
           ...parsedMessage,
           isFromSelf: true
         };
-        ws.send(JSON.stringify(messageWithFlag));
+        connection.send(JSON.stringify(messageWithFlag));
 
         // Broadcast to other clients
+        const broadcastCount = Array.from(wss.clients).filter(
+          (client) =>
+            client !== connection && client.readyState === WebSocket.OPEN
+        ).length;
+
         wss.clients.forEach((client) => {
-          if (client !== ws && client.readyState === WebSocket.OPEN) {
+          if (client !== connection && client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify(parsedMessage));
           }
         });
@@ -179,26 +264,34 @@ const handleConnection = (ws) => {
           ...parsedMessage,
           isFromSelf: true
         };
-        ws.send(JSON.stringify(messageWithFlag));
+        connection.send(JSON.stringify(messageWithFlag));
       }
       // Handle all other messages
       else {
         wss.clients.forEach((client) => {
-          if (client !== ws && client.readyState === WebSocket.OPEN) {
+          if (client !== connection && client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify(parsedMessage));
           }
         });
       }
     } catch (e) {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ error: e.message }));
+      console.error(
+        `[${serverType}] Error processing message from ${socketId}:`,
+        e.message
+      );
+      if (connection.readyState === WebSocket.OPEN) {
+        connection.send(JSON.stringify({ error: e.message }));
       }
     }
   });
+
+  connection.on("error", (error) => {
+    console.error(`[${serverType}] WebSocket error for ${socketId}:`, error);
+  });
 };
 
-ws.on("connection", handleConnection);
-wss.on("connection", handleConnection);
+ws.on("connection", (websocket) => handleConnection(websocket, "WS"));
+wss.on("connection", (websocket) => handleConnection(websocket, "WSS"));
 
 httpServer.listen(httpPort, () => {
   console.log(`HTTP server running at http://localhost:${httpPort}`);
