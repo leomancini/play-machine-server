@@ -253,8 +253,8 @@ const handleConnection = (connection, serverType = "unknown") => {
         };
         connection.send(JSON.stringify(messageWithFlag));
       }
-      // Handle all other messages (except response messages)
-      else if (!["currentTheme", "currentApp"].includes(parsedMessage.action)) {
+      // Handle all other messages
+      else {
         [...ws.clients, ...wss.clients].forEach((client) => {
           if (client !== connection && client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify(parsedMessage));
