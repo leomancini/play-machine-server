@@ -169,7 +169,7 @@ const handleConnection = (connection, serverType = "unknown") => {
         });
 
         if (!targetClient) {
-          wss.clients.forEach((client) => {
+          [...ws.clients, ...wss.clients].forEach((client) => {
             if (
               client.socketId === parsedMessage.socketId &&
               client.readyState === WebSocket.OPEN
@@ -184,12 +184,7 @@ const handleConnection = (connection, serverType = "unknown") => {
         } else {
           // Log all available socket IDs for debugging
           const availableSocketIds = [];
-          ws.clients.forEach((client) => {
-            if (client.socketId && client.readyState === WebSocket.OPEN) {
-              availableSocketIds.push(client.socketId);
-            }
-          });
-          wss.clients.forEach((client) => {
+          [...ws.clients, ...wss.clients].forEach((client) => {
             if (client.socketId && client.readyState === WebSocket.OPEN) {
               availableSocketIds.push(client.socketId);
             }
@@ -205,8 +200,8 @@ const handleConnection = (connection, serverType = "unknown") => {
           ...parsedMessage,
           socketId: socketId
         };
-
-        wss.clients.forEach((client) => {
+        // Broadcast to both WS and WSS clients, excluding the sender
+        [...ws.clients, ...wss.clients].forEach((client) => {
           if (client !== connection && client.readyState === WebSocket.OPEN) {
             console.log(
               `[DEBUG] Broadcasting getCurrentTheme to ${client.socketId}`
@@ -222,7 +217,7 @@ const handleConnection = (connection, serverType = "unknown") => {
           socketId: socketId
         };
 
-        wss.clients.forEach((client) => {
+        [...ws.clients, ...wss.clients].forEach((client) => {
           if (client !== connection && client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify(messageWithSocketId));
           }
@@ -235,7 +230,7 @@ const handleConnection = (connection, serverType = "unknown") => {
           socketId: socketId
         };
 
-        wss.clients.forEach((client) => {
+        [...ws.clients, ...wss.clients].forEach((client) => {
           if (client !== connection && client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify(messageWithSocketId));
           }
@@ -249,13 +244,7 @@ const handleConnection = (connection, serverType = "unknown") => {
         };
         connection.send(JSON.stringify(messageWithFlag));
 
-        // Broadcast to other clients
-        const broadcastCount = Array.from(wss.clients).filter(
-          (client) =>
-            client !== connection && client.readyState === WebSocket.OPEN
-        ).length;
-
-        wss.clients.forEach((client) => {
+        [...ws.clients, ...wss.clients].forEach((client) => {
           if (client !== connection && client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify(parsedMessage));
           }
@@ -269,9 +258,9 @@ const handleConnection = (connection, serverType = "unknown") => {
         };
         connection.send(JSON.stringify(messageWithFlag));
       }
-      // Handle all other messages
-      else {
-        wss.clients.forEach((client) => {
+      // Handle all other messages (except response messages)
+      else if (!["currentTheme", "currentApp"].includes(parsedMessage.action)) {
+        [...ws.clients, ...wss.clients].forEach((client) => {
           if (client !== connection && client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify(parsedMessage));
           }
