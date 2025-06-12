@@ -208,6 +208,9 @@ const handleConnection = (connection, serverType = "unknown") => {
 
         wss.clients.forEach((client) => {
           if (client !== connection && client.readyState === WebSocket.OPEN) {
+            console.log(
+              `[DEBUG] Broadcasting getCurrentTheme to ${client.socketId}`
+            );
             client.send(JSON.stringify(messageWithSocketId));
           }
         });
@@ -237,24 +240,6 @@ const handleConnection = (connection, serverType = "unknown") => {
             client.send(JSON.stringify(messageWithSocketId));
           }
         });
-      }
-      // Handle theme responses (currentTheme, etc.)
-      else if (
-        parsedMessage.action === "currentTheme" ||
-        parsedMessage.currentTheme !== undefined
-      ) {
-        // Theme responses should have a socketId if they're responding to a getCurrentTheme request
-        // If they have a socketId, the handling at the top will route them correctly
-        // If they don't have a socketId, they're unsolicited broadcasts
-        if (!parsedMessage.socketId) {
-          // Unsolicited theme broadcast - send to all other clients
-          wss.clients.forEach((client) => {
-            if (client !== connection && client.readyState === WebSocket.OPEN) {
-              client.send(JSON.stringify(parsedMessage));
-            }
-          });
-        }
-        // If it has a socketId, it will be handled by the socketId routing at the top
       }
       // Handle serialData responses and other serialData
       else if (parsedMessage.serialData !== undefined) {
@@ -319,6 +304,6 @@ wsServer.listen(wsPort, () => {
 });
 wssServer.listen(wssPort, () => {
   console.log(
-    `WebSocket server running at ws://localhost:${wssPort} (will be secured by Apache)`
+    `WebSocket server running at wss://localhost:${wssPort} (will be secured by Apache)`
   );
 });
