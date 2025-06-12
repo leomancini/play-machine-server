@@ -203,9 +203,6 @@ const handleConnection = (connection, serverType = "unknown") => {
         // Broadcast to both WS and WSS clients, excluding the sender
         [...ws.clients, ...wss.clients].forEach((client) => {
           if (client !== connection && client.readyState === WebSocket.OPEN) {
-            console.log(
-              `[DEBUG] Broadcasting getCurrentTheme to ${client.socketId}`
-            );
             client.send(JSON.stringify(messageWithSocketId));
           }
         });
@@ -239,8 +236,7 @@ const handleConnection = (connection, serverType = "unknown") => {
       // Handle serialData responses and other serialData
       else if (parsedMessage.serialData !== undefined) {
         const messageWithFlag = {
-          ...parsedMessage,
-          isFromSelf: true
+          ...parsedMessage
         };
         connection.send(JSON.stringify(messageWithFlag));
 
@@ -253,8 +249,7 @@ const handleConnection = (connection, serverType = "unknown") => {
       // Handle screenshot data
       else if (parsedMessage.screenshotData !== undefined) {
         const messageWithFlag = {
-          ...parsedMessage,
-          isFromSelf: true
+          ...parsedMessage
         };
         connection.send(JSON.stringify(messageWithFlag));
       }
