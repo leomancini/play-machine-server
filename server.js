@@ -25,6 +25,8 @@ const wssPort = 3103;
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 
+const httpServer = createServer(app);
+
 app.use((req, res, next) => {
   req.url = req.url.replace(/\/+/g, "/");
   next();
@@ -133,7 +135,6 @@ app.delete("/api/delete-screenshots/:id", (req, res) => {
   }
 });
 
-const httpServer = createServer(app);
 const wsServer = createServer();
 const wssServer = createServer();
 
