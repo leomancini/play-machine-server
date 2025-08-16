@@ -234,6 +234,14 @@ const handleConnection = (connection, serverType = "unknown") => {
           }
         });
       }
+      // Handle parameterChanged events - broadcast to other clients
+      else if (parsedMessage.action === "parameterChanged") {
+        [...ws.clients, ...wss.clients].forEach((client) => {
+          if (client !== connection && client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(parsedMessage));
+          }
+        });
+      }
       // Handle serialData responses and other serialData
       else if (parsedMessage.serialData !== undefined) {
         const messageWithFlag = {
